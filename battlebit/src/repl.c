@@ -72,6 +72,8 @@ void repl_execute_command(struct char_buff * buffer) {
 
         } else if (strcmp(command, "nasm") == 0) {
             nasm_hello_world();
+        } else if (strcmp(command, "say") == 0) {
+
         } else {
             printf("Unknown Command: %s\n", command);
         }
@@ -87,6 +89,7 @@ void repl_print_board(game *game, int player, char_buff * buffer) {
     cb_append(buffer, "-----[ SHIPS ]----\n");
     repl_print_ships(&player_info, buffer);
     cb_append(buffer, ".........battleBit\n\n");
+    cb_print(buffer);
 }
 
 void repl_print_ships(player_info *player_info, char_buff *buffer) {
@@ -94,6 +97,22 @@ void repl_print_ships(player_info *player_info, char_buff *buffer) {
     //  for the console.  You will need to use bit masking for each position
     //  to determine if a ship is at the position or not.  If it is present
     //  you need to print an X.  If not, you need to print a space character ' '
+    cb_append(buffer, "  0 1 2 3 4 5 6 7 \n");
+    unsigned long long ships = player_info->ships;
+    for (int i = 0; i < 8; i++) {
+        cb_append_int(buffer, i);
+        cb_append(buffer, " ");
+        for (int j = 0; j < 8; j++) {
+            unsigned int position = (i * 8) + j;
+            unsigned long long bitmask = 1ull << position;
+            if ((ships & bitmask) != 0) {
+                cb_append(buffer, "* ");
+            } else {
+                cb_append(buffer, "  ");
+            }
+        }
+        cb_append(buffer, "\n");
+    }
 }
 
 void repl_print_hits(struct player_info *player_info, struct char_buff *buffer) {

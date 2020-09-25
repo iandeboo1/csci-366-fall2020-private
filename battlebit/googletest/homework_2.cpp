@@ -6,7 +6,7 @@ char * print_binary_representation(unsigned int i, char *buffer){
     // fill out remaining 32 bits, 1 or 0 depending on the value in the number i
     unsigned int j;
     unsigned int n = 31;
-    for (j = 1 << n; j > 0; j = j / 2) {
+    for (j = 1u << n; j > 0; j = j / 2) {
         if (i & j) {
             buffer[32 - n + 1] = '1';
         } else {

@@ -55,6 +55,7 @@ unsigned long long int xy_to_bitval(int x, int y) {
     // you will need to use bitwise operators and some math to produce the right
     // value.
     if (x >= 0 && x <= 7 && y >= 0 && y <= 7) {
+        //contains valid coordinates
         unsigned long long int j = 1;
         int bit_shift = x + (8 * y);
         for (int i = 0; i < bit_shift; i++) {
@@ -100,6 +101,7 @@ int game_load_board(struct game *game, int player, char * spec) {
             bool hasPatrol = false;
             bool no_space_errors = true;
             for (int i = 0; i < 5; i++) {
+                //one loop per ship specification
                 char ship_type = spec[(3 * i)];
                 int x_coord = spec[(3 * i) + 1] - '0';
                 int y_coord= spec[(3 * i) + 2] - '0';

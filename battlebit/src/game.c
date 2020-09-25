@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "game.h"
 
 // STEP 10 - Synchronization: the GAME structure will be accessed by both players interacting
@@ -53,6 +54,16 @@ unsigned long long int xy_to_bitval(int x, int y) {
     //
     // you will need to use bitwise operators and some math to produce the right
     // value.
+    if (x >= 0 && x <= 7 && y >= 0 && y <= 7) {
+        unsigned long long int j = 1;
+        int bit_shift = x + (8 * y);
+        for (int i = 0; i < bit_shift; i++) {
+            j = j << 1u;
+        }
+        return j;
+    } else {
+        return 0;
+    }
 }
 
 struct game * game_get_current() {
@@ -70,16 +81,140 @@ int game_load_board(struct game *game, int player, char * spec) {
     // slot and return 1
     //
     // if it is invalid, you should return -1
+    char * valid_inputs = "cCbBdDsSpP01234567";
+    bool is_valid = true;
+    if (spec != NULL && strlen(spec) == 15) {
+        //spec isn't blank and is the correct length
+        for (int i = 0; i < strlen(spec); i++) {
+            if ((strchr(valid_inputs, spec[i])) == NULL) {
+                is_valid = false;
+                break;
+            }
+        }
+        if (is_valid) {
+            //spec contains all valid characters
+            bool hasCarrier = false;
+            bool hasBattle = false;
+            bool hasDestroyer = false;
+            bool hasSub = false;
+            bool hasPatrol = false;
+            bool no_space_errors = true;
+            for (int i = 0; i < 5; i++) {
+                char ship_type = spec[(3 * i)];
+                int x_coord = spec[(3 * i) + 1] - '0';
+                int y_coord= spec[(3 * i) + 2] - '0';
+                int ship_length;
+                if (ship_type == 'c' || ship_type == 'C') {
+                    ship_length = 5;
+                    if (hasCarrier) {
+                        return -1;
+                    } else {
+                        hasCarrier = true;
+                    }
+                } else if (ship_type == 'b' || ship_type == 'B') {
+                    ship_length = 4;
+                    if (hasBattle) {
+                        return -1;
+                    } else {
+                        hasBattle = true;
+                    }
+                } else if (ship_type == 'd' || ship_type == 'D') {
+                    ship_length = 3;
+                    if (hasDestroyer) {
+                        return -1;
+                    } else {
+                        hasDestroyer = true;
+                    }
+                } else if (ship_type == 's' || ship_type == 'S') {
+                    ship_length = 3;
+                    if (hasSub) {
+                        return -1;
+                    } else {
+                        hasSub = true;
+                    }
+                } else {
+                    ship_length = 2;
+                    if (hasPatrol) {
+                        return -1;
+                    } else {
+                        hasPatrol = true;
+                    }
+                }
+                if (ship_type >= 'A' && ship_type <= 'Z') {
+                    //letter is uppercase
+                    if ((add_ship_horizontal(&game->players[player], x_coord, y_coord, ship_length)) != 1) {
+                        no_space_errors = false;
+                        break;
+                    }
+                } else {
+                    //letter is lowercase
+                    if ((add_ship_vertical(&game->players[player], x_coord, y_coord, ship_length)) != 1) {
+                        no_space_errors = false;
+                        break;
+                    }
+                }
+            }
+            if (no_space_errors) {
+                return 1;
+            } else {
+                return -1;  //at least one of the ship locations was not valid
+            }
+        } else {
+            return -1;
+        }
+    } else {
+        return -1;
+    }
 }
 
 int add_ship_horizontal(player_info *player, int x, int y, int length) {
     // implement this as part of Step 2
     // returns 1 if the ship can be added, -1 if not
     // hint: this can be defined recursively
+    unsigned long long ships = player->ships;
+    if (length != 0) {
+        if (x < 8) {
+            //position is not off-the-board
+            unsigned long long bitval = xy_to_bitval(x, y);
+            if ((ships & bitval) == 0) {
+                //spot open on board
+                player->ships = ships | bitval;
+                return add_ship_horizontal(player, x + 1, y, length - 1);
+            } else {
+                //overlapping ship
+                return -1;
+            }
+        } else {
+            return -1;
+        }
+    } else {
+        //ship position has been fully checked and is valid
+        return 1;
+    }
 }
 
 int add_ship_vertical(player_info *player, int x, int y, int length) {
     // implement this as part of Step 2
     // returns 1 if the ship can be added, -1 if not
     // hint: this can be defined recursively
+    unsigned long long ships = player->ships;
+    if (length != 0) {
+        if (y < 8) {
+            //position is not off-the-board
+            unsigned long long bitval = xy_to_bitval(x, y);
+            if ((ships & bitval) == 0) {
+                //spot open on board
+                player->ships = ships | bitval;
+                return add_ship_vertical(player, x, y + 1, length - 1);
+            } else {
+                //overlapping ship
+                return -1;
+            }
+        } else {
+            return -1;
+        }
+    } else {
+        //ship position has been fully checked and is valid
+        return 1;
+    }
 }

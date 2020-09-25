@@ -163,5 +163,5 @@ TEST(game_load_board,valid_spec) {
     //game_init_player_info(player_info);
     char *spec = "C00b02D23S47p71";
     ASSERT_EQ(game_load_board(gameon, 0, spec), 0);
-}
 
+}

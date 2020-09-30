@@ -33,13 +33,45 @@ int game_fire(game *game, int player, int x, int y) {
     // Step 5 - This is the crux of the game.  You are going to take a shot from the given player and
     // update all the bit values that store our game state.
     //
-    //  - You will need up update the players 'shots' value
-    //  - you You will need to see if the shot hits a ship in the opponents ships value.  If so, record a hit in the
+    //  - You will need to update the players 'shots' value
+    //  - You will need to see if the shot hits a ship in the opponents ships value.  If so, record a hit in the
     //    current players hits field
     //  - If the shot was a hit, you need to flip the ships value to 0 at that position for the opponents ships field
     //
     //  If the opponents ships value is 0, they have no remaining ships, and you should set the game state to
     //  PLAYER_1_WINS or PLAYER_2_WINS depending on who won.
+    if (x < 0 || x > 7 || y < 0 || y > 7) {
+        return 0;
+    }
+    int other_player = 1 - player;
+    unsigned long long this_shot = xy_to_bitval(x, y);
+    unsigned long long shots = game->players[player].shots;
+    unsigned long long opponent_ships = game->players[other_player].ships;
+    unsigned long long hits = game->players[player].hits;
+    if ((shots & this_shot) == 0) {
+        //shot hasn't already been made
+        game->players[player].shots = shots | this_shot;    //record shot in shots
+        if ((opponent_ships & this_shot) == 1) {
+            //hit opponent ship
+            game->players[player].hits = hits | this_shot;  //record shot in hits
+            game->players[other_player].ships = opponent_ships ^ this_shot;     //record shot in opponent's ships
+            if (game->players[other_player].ships == 0) {
+                //opponent has no ships left, current player won
+                if (player == 0) {
+                    game->status = PLAYER_1_WINS;
+                } else {
+                    game->status = PLAYER_2_WINS;
+                }
+            }
+            return 1;
+        } else {
+            //missed opponent ship
+            return 0;
+        }
+    } else {
+        //TODO: ask what should happen if they try to call the same shot twice, also ask about errors in 2 tests
+        return 0;
+    }
 }
 
 unsigned long long int xy_to_bitval(int x, int y) {
@@ -56,7 +88,7 @@ unsigned long long int xy_to_bitval(int x, int y) {
     // value.
     if (x >= 0 && x <= 7 && y >= 0 && y <= 7) {
         //contains valid coordinates
-        unsigned long long int j = 1;
+        unsigned long long j = 1;
         int bit_shift = x + (8 * y);
         for (int i = 0; i < bit_shift; i++) {
             j = j << 1u;

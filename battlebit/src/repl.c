@@ -100,12 +100,15 @@ void repl_print_ships(player_info *player_info, char_buff *buffer) {
     cb_append(buffer, "  0 1 2 3 4 5 6 7 \n");
     unsigned long long ships = player_info->ships;
     for (int i = 0; i < 8; i++) {
+        //loop through rows of game board
         cb_append_int(buffer, i);
         cb_append(buffer, " ");
         for (int j = 0; j < 8; j++) {
+            //loop through positions in row
             unsigned int position = (i * 8) + j;
             unsigned long long bitmask = 1ull << position;
             if ((ships & bitmask) != 0) {
+                //ship at position
                 cb_append(buffer, "* ");
             } else {
                 cb_append(buffer, "  ");
@@ -122,4 +125,30 @@ void repl_print_hits(struct player_info *player_info, struct char_buff *buffer) 
     // hits and shots values in the players game struct.  If a shot was fired at
     // a given spot and it was a hit, print 'H', if it was a miss, print 'M'.  If
     // no shot was taken at a position, print a space character ' '
+    cb_append(buffer, "  0 1 2 3 4 5 6 7 \n");
+    unsigned long long shots = player_info->shots;
+    unsigned long long hits = player_info->hits;
+    for (int i = 0; i < 8; i++) {
+        //loop through rows of game board
+        cb_append_int(buffer, i);
+        cb_append(buffer, " ");
+        for (int j = 0; j < 8; j++) {
+            //loop through positions in row
+            unsigned int position = (i * 8) + j;
+            unsigned long long bitmask = 1ull << position;
+            if ((shots & bitmask) != 0) {
+                //shot a position
+                if ((hits & bitmask) != 0) {
+                    //hit at position
+                    cb_append(buffer, "H ");
+                } else {
+                    //miss at position
+                    cb_append(buffer, "M ");
+                }
+            } else {
+                cb_append(buffer, "  ");
+            }
+        }
+        cb_append(buffer, "\n");
+    }
 }

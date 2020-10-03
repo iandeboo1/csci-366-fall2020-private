@@ -53,27 +53,34 @@ void repl_execute_command(struct char_buff * buffer) {
             printf("server - start the server\n");
             printf("exit - quit the server\n");
         } else if(strcmp(command, "server") == 0) {
-            server_start();
+            if (server_start() == 0) {
+                printf("server started successfully\n");
+            } else {
+                printf("server could not be started\n");
+            }
         } else if(strcmp(command, "show") == 0) {
-
-            // work with repl_print_board
-
+            game * current_game = game_get_current();
+            int player_as_int = arg1[0] - '0';
+            struct char_buff *board_buffer = cb_create(2000);
+            repl_print_board(current_game, player_as_int, board_buffer);
         } else if(strcmp(command, "reset") == 0) {
-
             game_init();
-
         } else if (strcmp(command, "load") == 0) {
-
-            // work with game_load_board
-
+            game * current_game = game_get_current();
+            int player_as_int = arg1[0] - '0';
+            game_load_board(current_game, player_as_int, arg2);
         } else if (strcmp(command, "fire") == 0) {
-
-            // work with game_fire
-
+            game * current_game = game_get_current();
+            int player_as_int = arg1[0] - '0';
+            int x_pos = arg2[0] - '0';
+            int y_pos = arg3[0] - '0';
+            game_fire(current_game, player_as_int, x_pos, y_pos);
         } else if (strcmp(command, "nasm") == 0) {
             nasm_hello_world();
         } else if (strcmp(command, "say") == 0) {
-
+            struct char_buff *chat_buffer = cb_create(2000);
+            cb_append(chat_buffer, arg1);
+            server_broadcast(chat_buffer);
         } else {
             printf("Unknown Command: %s\n", command);
         }

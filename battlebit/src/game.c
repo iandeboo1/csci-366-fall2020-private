@@ -69,7 +69,6 @@ int game_fire(game *game, int player, int x, int y) {
             return 0;
         }
     } else {
-        //TODO: ask what should happen if they try to call the same shot twice, also ask about errors in 2 tests
         return 0;
     }
 }

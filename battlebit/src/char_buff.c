@@ -34,7 +34,7 @@ int cb_append_int(struct char_buff * buffer, int arg) {
 }
 
 void cb_print(struct char_buff * buffer) {
-    printf("size: %li, append_offset: %li\n", buffer->size, buffer->append_offset);
+    printf("\nsize: %li, append_offset: %li\n", buffer->size, buffer->append_offset);
 //    printf("string: %s\n", buffer->buffer);
     printf("%s\n", buffer->buffer);
 }

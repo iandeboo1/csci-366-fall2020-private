@@ -18,7 +18,7 @@ int main() {
 
     do {
         // This is the classic Read, Evaluate, Print Loop, hence REPL
-        command = repl_read_command("\nbattleBit (? for help) > ");
+        command = repl_read_command("battleBit (? for help) > ");
         repl_execute_command(command);
         cb_free(command);
     } while (command);

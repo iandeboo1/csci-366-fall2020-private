@@ -24,7 +24,7 @@ void init_server() {
     }
 }
 
-void* handle_client_connect(int player) {
+void* handle_client_connect(void* playerPointer) {
     // STEP 9 - This is the big one: you will need to re-implement the REPL code from
     // the repl.c file, but with a twist: you need to make sure that a player only
     // fires when the game is initialized and it is their turn.  They can broadcast
@@ -39,38 +39,34 @@ void* handle_client_connect(int player) {
     // This function will end up looking a lot like repl_execute_command, except you will
     // be working against network sockets rather than standard out, and you will need
     // to coordinate turns via the game::status field.
+    int player = (int)playerPointer;
+    //TODO: HOPEFULLY FIND A BETTER WAY TO DO THIS
     char welcome[100];
     sprintf(welcome, "\nWelcome to BattleBit\n\n");
     send(SERVER->player_sockets[player], welcome, strlen(welcome), 0);
     int playerConnected = 1;
-    char_buff  * client_command;
+    char_buff  * client_command = cb_create(200);
 
     do {
         char message[100];
         sprintf(message, "battleBit (? for help) > ");
         send(SERVER->player_sockets[player], message, strlen(message), 0);
-        char buffer[2000];
-        if (recv(SERVER->player_sockets[player], buffer, 2000, 0) < 0) {
+        char buffer[200];
+        if (recv(SERVER->player_sockets[player], buffer, strlen(buffer), 0) < 0) {
             puts("Receive failed");
         } else {
-            puts(buffer);
+            cb_append(client_command, buffer);
         }
-//        client_command = repl_read_command("?");
-//TODO: FIGURE OUT WHY THIS LINE WON'T EXECUTE
-        //for testing only
-        char* command = "say";
-        //for testing only
-//        char* command = cb_tokenize(client_command, " \n");
+        char * command = cb_tokenize(client_command, " \n\r");
         if (command) {
-//            char *arg1 = cb_next_token(client_command);
-//            char *arg2 = cb_next_token(client_command);
-//            char *arg3 = cb_next_token(client_command);
+            char *arg1 = cb_next_token(client_command);
+            char *arg2 = cb_next_token(client_command);
+            char *arg3 = cb_next_token(client_command);
             if (strcmp(command, "exit") == 0) {
                 char exit_message[50];
-                sprintf(exit_message, "\nGoodbye\n");
+                sprintf(exit_message, "\nGoodbye!\n");
                 send(SERVER->player_sockets[player], exit_message, strlen(exit_message), 0);
                 playerConnected = 0;
-                exit(EXIT_SUCCESS);
             } else if (strcmp(command, "?") == 0) {
                 char help_message[300];
                 sprintf(help_message, "\n? - show help\n"
@@ -78,14 +74,19 @@ void* handle_client_connect(int player) {
                                       "show - shows the board for the given player\n"
                                       "fire [0-7] [0-7] - fire at the given position\n"
                                       "say <string> - Send the string to all players as part of a chat\n"
-                                      "exit - quit the server\n");
+                                      "exit - quit the server\n\n");
                 send(SERVER->player_sockets[player], help_message, strlen(help_message), 0);
             } else if (strcmp(command, "load") == 0) {
-                char load_message[50];
+                char load_message[100];
                 game * current_game = game_get_current();
-                if (game_load_board(current_game, player, "C00b02D23S47p71")) {
+                if (game_load_board(current_game, player, arg1)) {
                     sprintf(load_message, "\nLoaded game board successfully\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                    if (game_get_current()->players[1 - player].ships == 0) {
+                        game_get_current()->status = INITIALIZED;
+                    } else {
+                        game_get_current()->status = PLAYER_1_TURN;
+                    }
                 } else {
                     sprintf(load_message, "\nGame board was not loaded\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
@@ -96,20 +97,39 @@ void* handle_client_connect(int player) {
                 repl_print_board(current_game, player, board_buffer);
                 //TODO: NOT SURE HOW TO SEND THIS TO CLIENT IN A MESSAGE BECAUSE FUNC DOESN'T RETURN ANYTHING
             } else if (strcmp(command, "fire") == 0) {
-                char fire_message[50];
+                char fire_message[100];
+                char opponent_message[100];
                 game * current_game = game_get_current();
-                int x_pos = 1;
-                int y_pos = 1;
-                if (game_fire(current_game, player, x_pos, y_pos)) {
-                    sprintf(fire_message, "\nFired shot successfully\n");
+                if ((current_game->status == PLAYER_1_TURN && player == 0) || (current_game->status == PLAYER_2_TURN && player == 1)) {
+                    //it's their turn
+                    int x_pos = arg1[0] - '0';
+                    int y_pos = arg2[0] - '0';
+                    if (game_fire(current_game, player, x_pos, y_pos)) {
+                        //it was a hit
+                        sprintf(fire_message, "\nHit!\n");
+                        send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                        sprintf(opponent_message, "\nOpponent hit one of your ships!\n");
+                        send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                    } else {
+                        //it was a miss
+                        sprintf(fire_message, "\nMiss!\n");
+                        send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                        sprintf(opponent_message, "\nOpponent missed your ships!\n");
+                        send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                    }
+                } else if (current_game->status == CREATED) {
+                    sprintf(fire_message, "\nYou must choose your ship layout before firing\n\n");
+                    send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                } else if (current_game->status == INITIALIZED) {
+                    sprintf(fire_message, "\nWaiting on opponent to choose their ship layout\n\n");
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 } else {
-                    sprintf(fire_message, "\nShot was not fired\n");
+                    sprintf(fire_message, "\nThe other player is taking their turn\n\n");
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 }
             } else if (strcmp(command, "say") == 0) {
                 struct char_buff *chat_buffer = cb_create(2000);
-                cb_append(chat_buffer, "Hello, everyone!");
+                cb_append(chat_buffer, arg1);
                 server_broadcast(chat_buffer);
             } else {
                 char unknown_message[50];
@@ -117,21 +137,22 @@ void* handle_client_connect(int player) {
                 send(SERVER->player_sockets[player], unknown_message, strlen(unknown_message), 0);
             }
         }
-//        cb_free(client_command);
+        cb_free(client_command);
     } while (playerConnected);
 
     return (void *) 1;
 }
 
 void server_broadcast(char_buff *msg) {
-    puts((const char *) msg);
+    //TODO: CAN'T GET CHAR * FROM CHAR_BUFF *, SO NOT SURE HOW TO DO THIS
+    cb_print(msg);
     send(SERVER->player_sockets[0], msg, strlen((const char *) msg), 0);
     send(SERVER->player_sockets[1], msg, strlen((const char *) msg), 0);
 }
 
 void* run_server() {
     // STEP 8 - implement the server code to put this on the network.
-    // Here you will need to initalize a server socket and wait for incoming connections.
+    // Here you will need to initialize a server socket and wait for incoming connections.
     //
     // When a connection occurs, store the corresponding new client socket in the SERVER.player_sockets array
     // as the corresponding player position.
@@ -150,10 +171,10 @@ void* run_server() {
     server.sin_family = AF_INET;
     server.sin_port = htons(9876);
     if (bind(server_socket_fd, (struct sockaddr *) &server, sizeof(server)) < 0) {
-        puts("Bind failed");
-        return (void *) 0;
+        puts("\nBind failed\n");
+        return (void *) 0;      //TODO: FIGURE OUT THESE RETURNS
     } else {
-        puts("Bind worked!");
+        puts("\nBind worked!\n");
         listen(server_socket_fd, 2);
         puts("Waiting for incoming connections...");
     }
@@ -161,15 +182,17 @@ void* run_server() {
     socklen_t size_from_connect;
     int client_socket_fd;
     while ((client_socket_fd = accept(server_socket_fd, (struct sockaddr *) &client, &size_from_connect)) > 0) {
-            if ((SERVER->player_sockets[0]) == 0) {
-                SERVER->player_sockets[0] = client_socket_fd;
-                pthread_create(&SERVER->player_threads[0], NULL, handle_client_connect(0), NULL);
-            } else if ((SERVER->player_sockets[1]) == 0){
-                SERVER->player_sockets[1] = client_socket_fd;
-                pthread_create(&SERVER->player_threads[1], NULL, handle_client_connect(1), NULL);
-            } else {
-                puts("Game is full!");
-            }
+        if ((SERVER->player_sockets[0]) == 0) {
+            SERVER->player_sockets[0] = client_socket_fd;
+            pthread_create(&SERVER->player_threads[0], NULL,&handle_client_connect, 0);
+            puts("Player 1 added to the game");
+        } else if ((SERVER->player_sockets[1]) == 0){
+            SERVER->player_sockets[1] = client_socket_fd;
+            pthread_create(&SERVER->player_threads[1], NULL, &handle_client_connect, 1);
+            puts("Player 2 added to the game");
+        } else {
+            puts("Game is full!");
+        }
     }
     return (void *) 1;  //TODO: FIGURE OUT THESE RETURNS
 }
@@ -179,5 +202,6 @@ int server_start() {
     // interact with the game via the command line REPL
     init_server();
     pthread_create(&SERVER->server_thread, NULL, run_server, NULL);
-    return 1;   //TODO: FIGURE OUT THESE RETURNS
+    sleep(1);   //just so the REPL loop prompt is displayed after the server starting messages
+    return 1;
 }

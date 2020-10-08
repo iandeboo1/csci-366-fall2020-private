@@ -41,7 +41,7 @@ void repl_execute_command(struct char_buff * buffer) {
         char* arg2 = cb_next_token(buffer);
         char* arg3 = cb_next_token(buffer);
         if (strcmp(command, "exit") == 0) {
-            printf("goodbye!");
+            printf("\nGoodbye!\n");
             exit(EXIT_SUCCESS);
         } else if(strcmp(command, "?") == 0) {
             printf("\n? - show help\n");
@@ -53,10 +53,10 @@ void repl_execute_command(struct char_buff * buffer) {
             printf("server - start the server\n");
             printf("exit - quit the server\n");
         } else if(strcmp(command, "server") == 0) {
-            if (server_start() == 0) {
-                printf("server started successfully\n");
+            if (server_start() == 1) {
+                printf("\nServer started successfully\n\n");
             } else {
-                printf("server could not be started\n");
+                printf("\nServer could not be started\n");
             }
         } else if(strcmp(command, "show") == 0) {
             game * current_game = game_get_current();
@@ -65,6 +65,7 @@ void repl_execute_command(struct char_buff * buffer) {
             repl_print_board(current_game, player_as_int, board_buffer);
         } else if(strcmp(command, "reset") == 0) {
             game_init();
+            printf("\nGame has been reset\n\n");
         } else if (strcmp(command, "load") == 0) {
             game * current_game = game_get_current();
             int player_as_int = arg1[0] - '0';
@@ -82,14 +83,14 @@ void repl_execute_command(struct char_buff * buffer) {
             cb_append(chat_buffer, arg1);
             server_broadcast(chat_buffer);
         } else {
-            printf("Unknown Command: %s\n", command);
+            printf("\nUnknown Command: %s\n", command);
         }
     }
 }
 
 void repl_print_board(game *game, int player, char_buff * buffer) {
     player_info player_info = game->players[player];
-    cb_append(buffer, "battleBit.........\n");
+    cb_append(buffer, "\nbattleBit.........\n");
     cb_append(buffer, "-----[ ENEMY ]----\n");
     repl_print_hits(&player_info, buffer);
     cb_append(buffer, "==================\n");

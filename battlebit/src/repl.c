@@ -44,7 +44,7 @@ void repl_execute_command(struct char_buff * buffer) {
             printf("goodbye!");
             exit(EXIT_SUCCESS);
         } else if(strcmp(command, "?") == 0) {
-            printf("? - show help\n");
+            printf("\n? - show help\n");
             printf("load [0-1] <string> - load a ship layout file for the given player\n");
             printf("show [0-1] - shows the board for the given player\n");
             printf("fire [0-1] [0-7] [0-7] - fire at the given position\n");

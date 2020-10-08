@@ -40,9 +40,9 @@ void* handle_client_connect(int player) {
     // be working against network sockets rather than standard out, and you will need
     // to coordinate turns via the game::status field.
     char welcome[100];
-    sprintf(welcome, "Welcome to BattleBit\n\n");
+    sprintf(welcome, "\nWelcome to BattleBit\n\n");
     send(SERVER->player_sockets[player], welcome, strlen(welcome), 0);
-
+    int playerConnected = 1;
     char_buff  * client_command;
 
     do {
@@ -55,34 +55,78 @@ void* handle_client_connect(int player) {
         } else {
             puts(buffer);
         }
-        client_command = repl_read_command(buffer);
-        char* command = cb_tokenize(client_command, " \n");
+//        client_command = repl_read_command("?");
+//TODO: FIGURE OUT WHY THIS LINE WON'T EXECUTE
+        //for testing only
+        char* command = "say";
+        //for testing only
+//        char* command = cb_tokenize(client_command, " \n");
         if (command) {
-            char *arg1 = cb_next_token(client_command);
-            char *arg2 = cb_next_token(client_command);
-            char *arg3 = cb_next_token(client_command);
+//            char *arg1 = cb_next_token(client_command);
+//            char *arg2 = cb_next_token(client_command);
+//            char *arg3 = cb_next_token(client_command);
             if (strcmp(command, "exit") == 0) {
-                puts("goodbye!");
+                char exit_message[50];
+                sprintf(exit_message, "\nGoodbye\n");
+                send(SERVER->player_sockets[player], exit_message, strlen(exit_message), 0);
+                playerConnected = 0;
                 exit(EXIT_SUCCESS);
             } else if (strcmp(command, "?") == 0) {
-                char help_message[100];
-                sprintf(help_message, "? - show help\n");
+                char help_message[300];
+                sprintf(help_message, "\n? - show help\n"
+                                      "load <string> - load a ship layout file for the given player\n"
+                                      "show - shows the board for the given player\n"
+                                      "fire [0-7] [0-7] - fire at the given position\n"
+                                      "say <string> - Send the string to all players as part of a chat\n"
+                                      "exit - quit the server\n");
                 send(SERVER->player_sockets[player], help_message, strlen(help_message), 0);
-                printf("load [0-1] <string> - load a ship layout file for the given player\n");
-                printf("show [0-1] - shows the board for the given player\n");
-                printf("fire [0-1] [0-7] [0-7] - fire at the given position\n");
-                printf("say <string> - Send the string to all players as part of a chat\n");
-                printf("exit - quit the server\n");
+            } else if (strcmp(command, "load") == 0) {
+                char load_message[50];
+                game * current_game = game_get_current();
+                if (game_load_board(current_game, player, "C00b02D23S47p71")) {
+                    sprintf(load_message, "\nLoaded game board successfully\n");
+                    send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                } else {
+                    sprintf(load_message, "\nGame board was not loaded\n");
+                    send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                }
+            } else if (strcmp(command, "show") == 0) {
+                game * current_game = game_get_current();
+                struct char_buff *board_buffer = cb_create(2000);
+                repl_print_board(current_game, player, board_buffer);
+                //TODO: NOT SURE HOW TO SEND THIS TO CLIENT IN A MESSAGE BECAUSE FUNC DOESN'T RETURN ANYTHING
+            } else if (strcmp(command, "fire") == 0) {
+                char fire_message[50];
+                game * current_game = game_get_current();
+                int x_pos = 1;
+                int y_pos = 1;
+                if (game_fire(current_game, player, x_pos, y_pos)) {
+                    sprintf(fire_message, "\nFired shot successfully\n");
+                    send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                } else {
+                    sprintf(fire_message, "\nShot was not fired\n");
+                    send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                }
+            } else if (strcmp(command, "say") == 0) {
+                struct char_buff *chat_buffer = cb_create(2000);
+                cb_append(chat_buffer, "Hello, everyone!");
+                server_broadcast(chat_buffer);
+            } else {
+                char unknown_message[50];
+                sprintf(unknown_message, "\nUnknown Command: %s\n", command);
+                send(SERVER->player_sockets[player], unknown_message, strlen(unknown_message), 0);
             }
         }
-        cb_free(client_command);
-    } while (client_command);
+//        cb_free(client_command);
+    } while (playerConnected);
 
     return (void *) 1;
 }
 
 void server_broadcast(char_buff *msg) {
-    // send message to all players
+    puts((const char *) msg);
+    send(SERVER->player_sockets[0], msg, strlen((const char *) msg), 0);
+    send(SERVER->player_sockets[1], msg, strlen((const char *) msg), 0);
 }
 
 void* run_server() {
@@ -120,9 +164,11 @@ void* run_server() {
             if ((SERVER->player_sockets[0]) == 0) {
                 SERVER->player_sockets[0] = client_socket_fd;
                 pthread_create(&SERVER->player_threads[0], NULL, handle_client_connect(0), NULL);
-            } else {
+            } else if ((SERVER->player_sockets[1]) == 0){
                 SERVER->player_sockets[1] = client_socket_fd;
                 pthread_create(&SERVER->player_threads[1], NULL, handle_client_connect(1), NULL);
+            } else {
+                puts("Game is full!");
             }
     }
     return (void *) 1;  //TODO: FIGURE OUT THESE RETURNS

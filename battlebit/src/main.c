@@ -11,14 +11,14 @@ int main() {
      * into a buffer and then freeing the buffer.
      */
 
-    printf("Welcome to BattleBit\n\n");
+    printf("\nWelcome to BattleBit\n\n");
 
     char_buff * command;
     game_init(); // NB: game init initializes the game state, all held in game.c
 
     do {
         // This is the classic Read, Evaluate, Print Loop, hence REPL
-        command = repl_read_command("battleBit (? for help) > ");
+        command = repl_read_command("\nbattleBit (? for help) > ");
         repl_execute_command(command);
         cb_free(command);
     } while (command);

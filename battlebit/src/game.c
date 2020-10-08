@@ -51,7 +51,7 @@ int game_fire(game *game, int player, int x, int y) {
     if ((shots & this_shot) == 0) {
         //shot hasn't already been made
         game->players[player].shots = shots | this_shot;    //record shot in shots
-        if ((opponent_ships & this_shot) == 1) {
+        if ((opponent_ships & this_shot) != 0) {
             //hit opponent ship
             game->players[player].hits = hits | this_shot;  //record shot in hits
             game->players[other_player].ships = opponent_ships ^ this_shot;     //record shot in opponent's ships

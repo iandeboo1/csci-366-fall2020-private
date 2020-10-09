@@ -24,7 +24,7 @@ void init_server() {
     }
 }
 
-void* handle_client_connect(void* playerPointer) {
+void* handle_client_connect(int player) {
     // STEP 9 - This is the big one: you will need to re-implement the REPL code from
     // the repl.c file, but with a twist: you need to make sure that a player only
     // fires when the game is initialized and it is their turn.  They can broadcast
@@ -39,20 +39,19 @@ void* handle_client_connect(void* playerPointer) {
     // This function will end up looking a lot like repl_execute_command, except you will
     // be working against network sockets rather than standard out, and you will need
     // to coordinate turns via the game::status field.
-    int player = (int)playerPointer;
-    //TODO: HOPEFULLY FIND A BETTER WAY TO DO THIS
     char welcome[100];
     sprintf(welcome, "\nWelcome to BattleBit\n\n");
     send(SERVER->player_sockets[player], welcome, strlen(welcome), 0);
     int playerConnected = 1;
-    char_buff  * client_command = cb_create(200);
+    char_buff * client_command;
 
     do {
+        client_command = cb_create(2000);
         char message[100];
         sprintf(message, "battleBit (? for help) > ");
         send(SERVER->player_sockets[player], message, strlen(message), 0);
-        char buffer[200];
-        if (recv(SERVER->player_sockets[player], buffer, strlen(buffer), 0) < 0) {
+        char buffer[2000];
+        if (recv(SERVER->player_sockets[player], buffer, 2000, 0) < 0) {
             puts("Receive failed");
         } else {
             cb_append(client_command, buffer);
@@ -61,7 +60,6 @@ void* handle_client_connect(void* playerPointer) {
         if (command) {
             char *arg1 = cb_next_token(client_command);
             char *arg2 = cb_next_token(client_command);
-            char *arg3 = cb_next_token(client_command);
             if (strcmp(command, "exit") == 0) {
                 char exit_message[50];
                 sprintf(exit_message, "\nGoodbye!\n");
@@ -95,7 +93,7 @@ void* handle_client_connect(void* playerPointer) {
                 game * current_game = game_get_current();
                 struct char_buff *board_buffer = cb_create(2000);
                 repl_print_board(current_game, player, board_buffer);
-                //TODO: NOT SURE HOW TO SEND THIS TO CLIENT IN A MESSAGE BECAUSE FUNC DOESN'T RETURN ANYTHING
+                //TODO: NOT SURE HOW TO SEND THIS TO CLIENT IN A MESSAGE BECAUSE FUNC DOESN'T RETURN ANYTHING (can i edit the function return?)
             } else if (strcmp(command, "fire") == 0) {
                 char fire_message[100];
                 char opponent_message[100];
@@ -130,7 +128,7 @@ void* handle_client_connect(void* playerPointer) {
             } else if (strcmp(command, "say") == 0) {
                 struct char_buff *chat_buffer = cb_create(2000);
                 cb_append(chat_buffer, arg1);
-                server_broadcast(chat_buffer);
+                server_broadcast(chat_buffer, player);
             } else {
                 char unknown_message[50];
                 sprintf(unknown_message, "\nUnknown Command: %s\n", command);
@@ -143,11 +141,27 @@ void* handle_client_connect(void* playerPointer) {
     return (void *) 1;
 }
 
-void server_broadcast(char_buff *msg) {
-    //TODO: CAN'T GET CHAR * FROM CHAR_BUFF *, SO NOT SURE HOW TO DO THIS
-    cb_print(msg);
-    send(SERVER->player_sockets[0], msg, strlen((const char *) msg), 0);
-    send(SERVER->player_sockets[1], msg, strlen((const char *) msg), 0);
+void server_broadcast(char_buff *msg, int playerID) {
+    //TODO: VERIFY THAT IT'S OKAY THAT I CHANGED THE METHOD SIGNATURE, also not sure if it matters but you can't have spaces in your broadcasted string
+    char broadcastA[2000];
+    char broadcast1[2000];
+    char broadcast2[2000];
+    if (playerID == 0) {
+        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
+        sprintf(broadcast1, "\nPlayer %d says: %s\n\n", playerID + 1, msg->buffer);
+        sprintf(broadcast2, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
+    } else if (playerID == 1) {
+        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
+        sprintf(broadcast1, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
+        sprintf(broadcast2, "\nPlayer %d says: %s\n\n", playerID + 1, msg->buffer);
+    } else {
+        sprintf(broadcastA, "\nAdmin says: %s\n", msg->buffer);
+        sprintf(broadcast1, "\n\nAdmin says: %s\n\nbattleBit (? for help) > ", msg->buffer);
+        sprintf(broadcast2, "\n\nAdmin says: %s\n\nbattleBit (? for help) > ", msg->buffer);
+    }
+    puts(broadcastA);
+    send(SERVER->player_sockets[0], broadcast1, strlen(broadcast1), 0);
+    send(SERVER->player_sockets[1], broadcast2, strlen(broadcast2), 0);
 }
 
 void* run_server() {
@@ -185,11 +199,11 @@ void* run_server() {
         if ((SERVER->player_sockets[0]) == 0) {
             SERVER->player_sockets[0] = client_socket_fd;
             pthread_create(&SERVER->player_threads[0], NULL,&handle_client_connect, 0);
-            puts("Player 1 added to the game");
+            puts("\n\nPlayer 1 added to the game\n\nbattleBit (? for help) > ");
         } else if ((SERVER->player_sockets[1]) == 0){
             SERVER->player_sockets[1] = client_socket_fd;
             pthread_create(&SERVER->player_threads[1], NULL, &handle_client_connect, 1);
-            puts("Player 2 added to the game");
+            puts("\n\nPlayer 2 added to the game\n\nbattleBit (? for help) > ");
         } else {
             puts("Game is full!");
         }

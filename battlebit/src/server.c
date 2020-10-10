@@ -198,11 +198,11 @@ void* run_server() {
     while ((client_socket_fd = accept(server_socket_fd, (struct sockaddr *) &client, &size_from_connect)) > 0) {
         if ((SERVER->player_sockets[0]) == 0) {
             SERVER->player_sockets[0] = client_socket_fd;
-            pthread_create(&SERVER->player_threads[0], NULL,&handle_client_connect, 0);
+            pthread_create(&SERVER->player_threads[0], NULL, (void *(*)(void *)) &handle_client_connect, 0);
             puts("\n\nPlayer 1 added to the game\n\nbattleBit (? for help) > ");
         } else if ((SERVER->player_sockets[1]) == 0){
             SERVER->player_sockets[1] = client_socket_fd;
-            pthread_create(&SERVER->player_threads[1], NULL, &handle_client_connect, 1);
+            pthread_create(&SERVER->player_threads[1], NULL, (void *(*)(void *)) &handle_client_connect, (void *) 1);
             puts("\n\nPlayer 2 added to the game\n\nbattleBit (? for help) > ");
         } else {
             puts("Game is full!");

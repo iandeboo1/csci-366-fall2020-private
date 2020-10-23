@@ -24,7 +24,7 @@ void init_server() {
     }
 }
 
-void* handle_client_connect(int player) {
+int handle_client_connect(int player) {
     // STEP 9 - This is the big one: you will need to re-implement the REPL code from
     // the repl.c file, but with a twist: you need to make sure that a player only
     // fires when the game is initialized and it is their turn.  They can broadcast
@@ -90,10 +90,18 @@ void* handle_client_connect(int player) {
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
                 }
             } else if (strcmp(command, "show") == 0) {
-                game * current_game = game_get_current();
+                player_info player_info = game_get_current()->players[player];
                 struct char_buff *board_buffer = cb_create(2000);
-                repl_print_board(current_game, player, board_buffer);
-                //TODO: NOT SURE HOW TO SEND THIS TO CLIENT IN A MESSAGE BECAUSE FUNC DOESN'T RETURN ANYTHING (can i edit the function return?)
+                char show_message[2000];
+                cb_append(board_buffer, "\nbattleBit.........\n");
+                cb_append(board_buffer, "-----[ ENEMY ]----\n");
+                repl_print_hits(&player_info, board_buffer);
+                cb_append(board_buffer, "==================\n");
+                cb_append(board_buffer, "-----[ SHIPS ]----\n");
+                repl_print_ships(&player_info, board_buffer);
+                cb_append(board_buffer, ".........battleBit\n\n");
+                sprintf(show_message, "%s", board_buffer->buffer);
+                send(SERVER->player_sockets[player], show_message, strlen(show_message), 0);
             } else if (strcmp(command, "fire") == 0) {
                 char fire_message[100];
                 char opponent_message[100];
@@ -114,6 +122,12 @@ void* handle_client_connect(int player) {
                         send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                         sprintf(opponent_message, "\nOpponent missed your ships!\n");
                         send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                    }
+                    //flips turn regardless of hit/miss unless a player won
+                    if (current_game->status == PLAYER_1_TURN) {
+                        current_game->status = PLAYER_2_TURN;
+                    } else if (current_game->status == PLAYER_2_TURN) {
+                        current_game->status = PLAYER_1_TURN;
                     }
                 } else if (current_game->status == CREATED) {
                     sprintf(fire_message, "\nYou must choose your ship layout before firing\n\n");
@@ -138,11 +152,10 @@ void* handle_client_connect(int player) {
         cb_free(client_command);
     } while (playerConnected);
 
-    return (void *) 1;
+    return 1;
 }
 
 void server_broadcast(char_buff *msg, int playerID) {
-    //TODO: VERIFY THAT IT'S OKAY THAT I CHANGED THE METHOD SIGNATURE, also not sure if it matters but you can't have spaces in your broadcasted string
     char broadcastA[2000];
     char broadcast1[2000];
     char broadcast2[2000];
@@ -164,7 +177,7 @@ void server_broadcast(char_buff *msg, int playerID) {
     send(SERVER->player_sockets[1], broadcast2, strlen(broadcast2), 0);
 }
 
-void* run_server() {
+int run_server() {
     // STEP 8 - implement the server code to put this on the network.
     // Here you will need to initialize a server socket and wait for incoming connections.
     //
@@ -176,7 +189,6 @@ void* run_server() {
     int server_socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server_socket_fd == -1) {
         printf("Couldn't create socket");
-        return (void *) 0;  //TODO: FIGURE OUT THESE RETURNS
     }
     int yes = 1;
     setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
@@ -186,7 +198,7 @@ void* run_server() {
     server.sin_port = htons(9876);
     if (bind(server_socket_fd, (struct sockaddr *) &server, sizeof(server)) < 0) {
         puts("\nBind failed\n");
-        return (void *) 0;      //TODO: FIGURE OUT THESE RETURNS
+        return 0;
     } else {
         puts("\nBind worked!\n");
         listen(server_socket_fd, 2);
@@ -208,14 +220,14 @@ void* run_server() {
             puts("Game is full!");
         }
     }
-    return (void *) 1;  //TODO: FIGURE OUT THESE RETURNS
+    return 1;
 }
 
 int server_start() {
     // STEP 7 - using a pthread, run the run_server() function asynchronously, so you can still
     // interact with the game via the command line REPL
     init_server();
-    pthread_create(&SERVER->server_thread, NULL, run_server, NULL);
+    pthread_create(&SERVER->server_thread, NULL, (void *(*)(void *)) run_server, NULL);
     sleep(1);   //just so the REPL loop prompt is displayed after the server starting messages
     return 1;
 }

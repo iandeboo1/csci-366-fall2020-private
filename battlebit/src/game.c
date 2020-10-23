@@ -136,41 +136,23 @@ int game_load_board(struct game *game, int player, char * spec) {
                 int x_coord = spec[(3 * i) + 1] - '0';
                 int y_coord= spec[(3 * i) + 2] - '0';
                 int ship_length;
-                if (ship_type == 'c' || ship_type == 'C') {
+                if ((ship_type == 'c' || ship_type == 'C') && hasCarrier == false) {
                     ship_length = 5;
-                    if (hasCarrier) {
-                        return -1;
-                    } else {
-                        hasCarrier = true;
-                    }
-                } else if (ship_type == 'b' || ship_type == 'B') {
+                    hasCarrier = true;
+                } else if ((ship_type == 'b' || ship_type == 'B') && hasBattle == false) {
                     ship_length = 4;
-                    if (hasBattle) {
-                        return -1;
-                    } else {
-                        hasBattle = true;
-                    }
-                } else if (ship_type == 'd' || ship_type == 'D') {
+                    hasBattle = true;
+                } else if ((ship_type == 'd' || ship_type == 'D') && hasDestroyer == false) {
                     ship_length = 3;
-                    if (hasDestroyer) {
-                        return -1;
-                    } else {
-                        hasDestroyer = true;
-                    }
-                } else if (ship_type == 's' || ship_type == 'S') {
+                    hasDestroyer = true;
+                } else if ((ship_type == 's' || ship_type == 'S') && hasSub == false) {
                     ship_length = 3;
-                    if (hasSub) {
-                        return -1;
-                    } else {
-                        hasSub = true;
-                    }
-                } else {
+                    hasSub = true;
+                } else if ((ship_type == 'p' || ship_type == 'P') && hasPatrol == false) {
                     ship_length = 2;
-                    if (hasPatrol) {
-                        return -1;
-                    } else {
-                        hasPatrol = true;
-                    }
+                    hasPatrol = true;
+                } else {
+                    return -1;
                 }
                 if (ship_type >= 'A' && ship_type <= 'Z') {
                     //letter is uppercase

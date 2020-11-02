@@ -80,11 +80,6 @@ int handle_client_connect(int player) {
                 if (game_load_board(current_game, player, arg1)) {
                     sprintf(load_message, "\nLoaded game board successfully\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
-                    if (game_get_current()->players[1 - player].ships == 0) {
-                        game_get_current()->status = INITIALIZED;
-                    } else {
-                        game_get_current()->status = PLAYER_1_TURN;
-                    }
                 } else {
                     sprintf(load_message, "\nGame board was not loaded\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
@@ -106,7 +101,7 @@ int handle_client_connect(int player) {
                 char fire_message[100];
                 char opponent_message[100];
                 game * current_game = game_get_current();
-                if ((current_game->status == PLAYER_1_TURN && player == 0) || (current_game->status == PLAYER_2_TURN && player == 1)) {
+                if ((current_game->status == PLAYER_0_TURN && player == 0) || (current_game->status == PLAYER_1_TURN && player == 1)) {
                     //it's their turn
                     int x_pos = arg1[0] - '0';
                     int y_pos = arg2[0] - '0';
@@ -124,10 +119,10 @@ int handle_client_connect(int player) {
                         send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
                     }
                     //flips turn regardless of hit/miss unless a player won
-                    if (current_game->status == PLAYER_1_TURN) {
-                        current_game->status = PLAYER_2_TURN;
-                    } else if (current_game->status == PLAYER_2_TURN) {
+                    if (current_game->status == PLAYER_0_TURN) {
                         current_game->status = PLAYER_1_TURN;
+                    } else if (current_game->status == PLAYER_1_TURN) {
+                        current_game->status = PLAYER_0_TURN;
                     }
                 } else if (current_game->status == CREATED) {
                     sprintf(fire_message, "\nYou must choose your ship layout before firing\n\n");

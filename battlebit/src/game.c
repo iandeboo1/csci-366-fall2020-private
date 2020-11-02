@@ -5,12 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "game.h"
+#include "pthread.h"
 
 // STEP 10 - Synchronization: the GAME structure will be accessed by both players interacting
 // asynchronously with the server.  Therefore the data must be protected to avoid race conditions.
 // Add the appropriate synchronization needed to ensure a clean battle.
 //TODO: THIS
-static game * GAME = NULL;
+pthread_mutex_t lock;
+static game * GAME;
 
 void game_init() {
     if (GAME) {
@@ -18,6 +20,7 @@ void game_init() {
     }
     GAME = malloc(sizeof(game));
     GAME->status = CREATED;
+    pthread_mutex_init(&lock, NULL);
     game_init_player_info(&GAME->players[0]);
     game_init_player_info(&GAME->players[1]);
 }
@@ -26,6 +29,15 @@ void game_init_player_info(player_info *player_info) {
     player_info->ships = 0;
     player_info->hits = 0;
     player_info->shots = 0;
+}
+
+void flipTurn() {
+    //flips turn regardless of hit/miss unless a player won
+    if (game_get_current()->status == PLAYER_0_TURN) {
+        game_get_current()->status = PLAYER_1_TURN;
+    } else if (game_get_current()->status == PLAYER_1_TURN) {
+        game_get_current()->status = PLAYER_0_TURN;
+    }
 }
 
 int game_fire(game *game, int player, int x, int y) {
@@ -57,17 +69,20 @@ int game_fire(game *game, int player, int x, int y) {
             if (game->players[other_player].ships == 0) {
                 //opponent has no ships left, current player won
                 if (player == 0) {
-                    game->status = PLAYER_1_WINS;
+                    game->status = PLAYER_0_WINS;
                 } else {
-                    game->status = PLAYER_2_WINS;
+                    game->status = PLAYER_1_WINS;
                 }
             }
+            flipTurn();
             return 1;
         } else {
             //missed opponent ship
+            flipTurn();
             return 0;
         }
     } else {
+        flipTurn();
         return 0;
     }
 }
@@ -169,6 +184,11 @@ int game_load_board(struct game *game, int player, char * spec) {
                 }
             }
             if (no_space_errors) {
+                if (game_get_current()->players[1 - player].ships == 0) {
+                    game_get_current()->status = CREATED;
+                } else {
+                    game_get_current()->status = PLAYER_0_TURN;
+                }
                 return 1;
             } else {
                 return -1;  //at least one of the ship locations was not valid

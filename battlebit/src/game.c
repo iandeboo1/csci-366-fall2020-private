@@ -10,8 +10,8 @@
 // STEP 10 - Synchronization: the GAME structure will be accessed by both players interacting
 // asynchronously with the server.  Therefore the data must be protected to avoid race conditions.
 // Add the appropriate synchronization needed to ensure a clean battle.
-//TODO: THIS
-pthread_mutex_t lock;
+//TODO: FIGURE OUT WHEN TO LOCK AND UNLOCK MUTEXES
+static pthread_mutex_t lock;
 static game * GAME;
 
 void game_init() {
@@ -23,6 +23,7 @@ void game_init() {
     pthread_mutex_init(&lock, NULL);
     game_init_player_info(&GAME->players[0]);
     game_init_player_info(&GAME->players[1]);
+    pthread_mutex_init(&lock, NULL);
 }
 
 void game_init_player_info(player_info *player_info) {
@@ -70,8 +71,10 @@ int game_fire(game *game, int player, int x, int y) {
                 //opponent has no ships left, current player won
                 if (player == 0) {
                     game->status = PLAYER_0_WINS;
+                    return 2;
                 } else {
                     game->status = PLAYER_1_WINS;
+                    return 2;
                 }
             }
             flipTurn();
@@ -184,9 +187,7 @@ int game_load_board(struct game *game, int player, char * spec) {
                 }
             }
             if (no_space_errors) {
-                if (game_get_current()->players[1 - player].ships == 0) {
-                    game_get_current()->status = CREATED;
-                } else {
+                if (game_get_current()->players[1 - player].ships != 0) {
                     game_get_current()->status = PLAYER_0_TURN;
                 }
                 return 1;

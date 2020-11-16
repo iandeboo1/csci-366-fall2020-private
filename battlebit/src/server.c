@@ -40,13 +40,15 @@ int handle_client_connect(int player) {
     // be working against network sockets rather than standard out, and you will need
     // to coordinate turns via the game::status field.
     char welcome[100];
-    sprintf(welcome, "\nWelcome to BattleBit\n\n");
+    sprintf(welcome, "\nWelcome to BattleBit server Player %d\n\n", player);
     send(SERVER->player_sockets[player], welcome, strlen(welcome), 0);
     int playerConnected = 1;
     char_buff * client_command;
+    char_buff * broadcast_msg;
 
     do {
         client_command = cb_create(2000);
+        broadcast_msg = cb_create(2000);
         char message[100];
         sprintf(message, "battleBit (? for help) > ");
         send(SERVER->player_sockets[player], message, strlen(message), 0);
@@ -55,6 +57,7 @@ int handle_client_connect(int player) {
             puts("Receive failed");
         } else {
             cb_append(client_command, buffer);
+            cb_append(broadcast_msg, buffer);
         }
         char * command = cb_tokenize(client_command, " \n\r");
         if (command) {
@@ -68,11 +71,11 @@ int handle_client_connect(int player) {
             } else if (strcmp(command, "?") == 0) {
                 char help_message[300];
                 sprintf(help_message, "\n? - show help\n"
-                                      "load <string> - load a ship layout file for the given player\n"
-                                      "show - shows the board for the given player\n"
+                                      "load <string> - load a ship layout\n"
+                                      "show - shows the board\n"
                                       "fire [0-7] [0-7] - fire at the given position\n"
                                       "say <string> - Send the string to all players as part of a chat\n"
-                                      "exit - quit the server\n\n");
+                                      "exit\n\n");
                 send(SERVER->player_sockets[player], help_message, strlen(help_message), 0);
             } else if (strcmp(command, "load") == 0) {
                 char load_message[100];
@@ -80,6 +83,13 @@ int handle_client_connect(int player) {
                 if (game_load_board(current_game, player, arg1)) {
                     sprintf(load_message, "\nLoaded game board successfully\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                    if (current_game->status == CREATED || current_game->status == INITIALIZED) {
+                        sprintf(load_message, "\nWaiting on Player %d\n\n", 1 - player);
+                        send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                    } else {
+                        sprintf(load_message, "\nAll player boards loaded\n\nPlayer 0 turn\n\n");
+                        send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
+                    }
                 } else {
                     sprintf(load_message, "\nGame board was not loaded\n");
                     send(SERVER->player_sockets[player], load_message, strlen(load_message), 0);
@@ -98,46 +108,51 @@ int handle_client_connect(int player) {
                 sprintf(show_message, "%s", board_buffer->buffer);
                 send(SERVER->player_sockets[player], show_message, strlen(show_message), 0);
             } else if (strcmp(command, "fire") == 0) {
-                char fire_message[100];
-                char opponent_message[100];
+                char fire_message[200];
+                char opponent_message[200];
                 game * current_game = game_get_current();
                 if ((current_game->status == PLAYER_0_TURN && player == 0) || (current_game->status == PLAYER_1_TURN && player == 1)) {
                     //it's their turn
                     int x_pos = arg1[0] - '0';
                     int y_pos = arg2[0] - '0';
-                    if (game_fire(current_game, player, x_pos, y_pos)) {
+                    int state = game_fire(current_game, player, x_pos, y_pos);
+                    if (state == 1) {
                         //it was a hit
-                        sprintf(fire_message, "\nHit!\n");
+                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT\n\n", player, x_pos, y_pos);
                         send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
-                        sprintf(opponent_message, "\nOpponent hit one of your ships!\n");
+                        sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- HIT\n\nbattleBit (? for help) > ", player, x_pos, y_pos);
                         send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                        puts(opponent_message);
+                    } else if (state == 2) {
+                        //game was won
+                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\n", player, x_pos, y_pos, player);
+                        send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                        sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\nbattleBit (? for help) > ", player, x_pos, y_pos, player);
+                        send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                        puts(opponent_message);
                     } else {
                         //it was a miss
-                        sprintf(fire_message, "\nMiss!\n");
+                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- MISS\n\n", player, x_pos, y_pos);
                         send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
-                        sprintf(opponent_message, "\nOpponent missed your ships!\n");
+                        sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- MISS\n\nbattleBit (? for help) > ", player, x_pos, y_pos);
                         send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
-                    }
-                    //flips turn regardless of hit/miss unless a player won
-                    if (current_game->status == PLAYER_0_TURN) {
-                        current_game->status = PLAYER_1_TURN;
-                    } else if (current_game->status == PLAYER_1_TURN) {
-                        current_game->status = PLAYER_0_TURN;
+                        puts(opponent_message);
                     }
                 } else if (current_game->status == CREATED) {
-                    sprintf(fire_message, "\nYou must choose your ship layout before firing\n\n");
+                    sprintf(fire_message, "\nGame has not begun!\n\n");
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 } else if (current_game->status == INITIALIZED) {
                     sprintf(fire_message, "\nWaiting on opponent to choose their ship layout\n\n");
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 } else {
-                    sprintf(fire_message, "\nThe other player is taking their turn\n\n");
+                    sprintf(fire_message, "\nPlayer %d turn\n\n", 1 - player);
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 }
             } else if (strcmp(command, "say") == 0) {
-                struct char_buff *chat_buffer = cb_create(2000);
-                cb_append(chat_buffer, arg1);
-                server_broadcast(chat_buffer, player);
+                char * msg = broadcast_msg->buffer;
+                msg[strlen(msg) - 1] = 0;
+                broadcast_msg->buffer = msg;
+                server_broadcast(broadcast_msg, player);
             } else {
                 char unknown_message[50];
                 sprintf(unknown_message, "\nUnknown Command: %s\n", command);
@@ -155,13 +170,13 @@ void server_broadcast(char_buff *msg, int playerID) {
     char broadcast1[2000];
     char broadcast2[2000];
     if (playerID == 0) {
-        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
-        sprintf(broadcast1, "\nPlayer %d says: %s\n\n", playerID + 1, msg->buffer);
-        sprintf(broadcast2, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
+        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID, msg->buffer);
+        sprintf(broadcast1, "\nPlayer %d says: %s\n\n", playerID, msg->buffer);
+        sprintf(broadcast2, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID, msg->buffer);
     } else if (playerID == 1) {
-        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
-        sprintf(broadcast1, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID + 1, msg->buffer);
-        sprintf(broadcast2, "\nPlayer %d says: %s\n\n", playerID + 1, msg->buffer);
+        sprintf(broadcastA, "\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID, msg->buffer);
+        sprintf(broadcast1, "\n\nPlayer %d says: %s\n\nbattleBit (? for help) > ", playerID, msg->buffer);
+        sprintf(broadcast2, "\nPlayer %d says: %s\n\n", playerID, msg->buffer);
     } else {
         sprintf(broadcastA, "\nAdmin says: %s\n", msg->buffer);
         sprintf(broadcast1, "\n\nAdmin says: %s\n\nbattleBit (? for help) > ", msg->buffer);
@@ -206,10 +221,16 @@ int run_server() {
         if ((SERVER->player_sockets[0]) == 0) {
             SERVER->player_sockets[0] = client_socket_fd;
             pthread_create(&SERVER->player_threads[0], NULL, (void *(*)(void *)) &handle_client_connect, 0);
+            if (game_get_current()->players[1].ships != 0) {
+                game_get_current()->status = INITIALIZED;
+            }
             puts("\n\nPlayer 1 added to the game\n\nbattleBit (? for help) > ");
         } else if ((SERVER->player_sockets[1]) == 0){
             SERVER->player_sockets[1] = client_socket_fd;
             pthread_create(&SERVER->player_threads[1], NULL, (void *(*)(void *)) &handle_client_connect, (void *) 1);
+            if (game_get_current()->players[0].ships != 0) {
+                game_get_current()->status = INITIALIZED;
+            }
             puts("\n\nPlayer 2 added to the game\n\nbattleBit (? for help) > ");
         } else {
             puts("Game is full!");

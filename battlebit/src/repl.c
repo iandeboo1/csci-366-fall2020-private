@@ -82,6 +82,9 @@ void repl_execute_command(struct char_buff * buffer) {
             struct char_buff *chat_buffer = cb_create(2000);
             cb_append(chat_buffer, arg1);
             server_broadcast(chat_buffer, 2);
+        } else if (strcmp(command, "shortcut") == 0) {
+            game_get_current()->players[1].ships = 1ull;
+            printf("\nSet Player 1's board to have only the 0,0 bit position\n\n");
         } else {
             printf("\nUnknown Command: %s\n", command);
         }

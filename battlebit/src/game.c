@@ -60,31 +60,25 @@ int game_fire(game *game, int player, int x, int y) {
     unsigned long long shots = game->players[player].shots;
     unsigned long long opponent_ships = game->players[other_player].ships;
     unsigned long long hits = game->players[player].hits;
-    if ((shots & this_shot) == 0) {
-        //shot hasn't already been made
-        game->players[player].shots = shots | this_shot;    //record shot in shots
-        if ((opponent_ships & this_shot) != 0) {
-            //hit opponent ship
-            game->players[player].hits = hits | this_shot;  //record shot in hits
-            game->players[other_player].ships = opponent_ships ^ this_shot;     //record shot in opponent's ships
-            if (game->players[other_player].ships == 0) {
-                //opponent has no ships left, current player won
-                if (player == 0) {
-                    game->status = PLAYER_0_WINS;
-                    return 2;
-                } else {
-                    game->status = PLAYER_1_WINS;
-                    return 2;
-                }
+    game->players[player].shots = shots | this_shot;    //record shot in shots
+    if ((opponent_ships & this_shot) != 0) {
+        //hit opponent ship
+        game->players[player].hits = hits | this_shot;  //record shot in hits
+        game->players[other_player].ships = opponent_ships ^ this_shot;     //record shot in opponent's ships
+        if (game->players[other_player].ships == 0) {
+            //opponent has no ships left, current player won
+            if (player == 0) {
+                game->status = PLAYER_0_WINS;
+                return 2;
+            } else {
+                game->status = PLAYER_1_WINS;
+                return 2;
             }
-            flipTurn();
-            return 1;
-        } else {
-            //missed opponent ship
-            flipTurn();
-            return 0;
         }
+        flipTurn();
+        return 1;
     } else {
+        //missed opponent ship
         flipTurn();
         return 0;
     }

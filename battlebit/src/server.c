@@ -122,11 +122,10 @@ int handle_client_connect(int player) {
                         puts(opponent_message);
                     } else if (state == 2) {
                         //game was won
-                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\n", player, x_pos, y_pos, player);
+                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\nbattleBit (? for help) > ", player, x_pos, y_pos, player);
                         send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
-                        sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\nbattleBit (? for help) > ", player, x_pos, y_pos, player);
-                        send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
-                        puts(opponent_message);
+                        send(SERVER->player_sockets[1 - player], fire_message, strlen(fire_message), 0);
+                        puts(fire_message);
                     } else {
                         //it was a miss
                         sprintf(fire_message, "\nPlayer %d fires at %d %d -- MISS\n\n", player, x_pos, y_pos);
@@ -151,6 +150,7 @@ int handle_client_connect(int player) {
                 cb_append(broadcast_msg, " ");
                 cb_append(broadcast_msg, arg2);
                 cb_append(broadcast_msg, " ");
+                cb_next_token(client_command);
                 while (true) {
                     char * word = cb_next_token(client_command);
                     if (word == NULL) {

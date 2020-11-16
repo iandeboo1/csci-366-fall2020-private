@@ -44,11 +44,9 @@ int handle_client_connect(int player) {
     send(SERVER->player_sockets[player], welcome, strlen(welcome), 0);
     int playerConnected = 1;
     char_buff * client_command;
-    char_buff * broadcast_msg;
 
     do {
         client_command = cb_create(2000);
-        broadcast_msg = cb_create(2000);
         char message[100];
         sprintf(message, "battleBit (? for help) > ");
         send(SERVER->player_sockets[player], message, strlen(message), 0);
@@ -57,7 +55,6 @@ int handle_client_connect(int player) {
             puts("Receive failed");
         } else {
             cb_append(client_command, buffer);
-            cb_append(broadcast_msg, buffer);
         }
         char * command = cb_tokenize(client_command, " \n\r");
         if (command) {
@@ -149,9 +146,20 @@ int handle_client_connect(int player) {
                     send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
                 }
             } else if (strcmp(command, "say") == 0) {
-                char * msg = broadcast_msg->buffer;
-                msg[strlen(msg) - 1] = 0;
-                broadcast_msg->buffer = msg;
+                char_buff * broadcast_msg = cb_create(2000);
+                cb_append(broadcast_msg, arg1);
+                cb_append(broadcast_msg, " ");
+                cb_append(broadcast_msg, arg2);
+                cb_append(broadcast_msg, " ");
+                while (true) {
+                    char * word = cb_next_token(client_command);
+                    if (word == NULL) {
+                        break;
+                    } else {
+                        cb_append(broadcast_msg, word);
+                        cb_append(broadcast_msg, " ");
+                    }
+                }
                 server_broadcast(broadcast_msg, player);
             } else {
                 char unknown_message[50];
@@ -224,14 +232,14 @@ int run_server() {
             if (game_get_current()->players[1].ships != 0) {
                 game_get_current()->status = INITIALIZED;
             }
-            puts("\n\nPlayer 1 added to the game\n\nbattleBit (? for help) > ");
+            puts("\n\nPlayer 0 added to the game\n\nbattleBit (? for help) > ");
         } else if ((SERVER->player_sockets[1]) == 0){
             SERVER->player_sockets[1] = client_socket_fd;
             pthread_create(&SERVER->player_threads[1], NULL, (void *(*)(void *)) &handle_client_connect, (void *) 1);
             if (game_get_current()->players[0].ships != 0) {
                 game_get_current()->status = INITIALIZED;
             }
-            puts("\n\nPlayer 2 added to the game\n\nbattleBit (? for help) > ");
+            puts("\n\nPlayer 1 added to the game\n\nbattleBit (? for help) > ");
         } else {
             puts("Game is full!");
         }

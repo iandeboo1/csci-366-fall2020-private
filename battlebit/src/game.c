@@ -10,8 +10,6 @@
 // STEP 10 - Synchronization: the GAME structure will be accessed by both players interacting
 // asynchronously with the server.  Therefore the data must be protected to avoid race conditions.
 // Add the appropriate synchronization needed to ensure a clean battle.
-//TODO: FIGURE OUT WHEN TO LOCK AND UNLOCK MUTEXES
-static pthread_mutex_t lock;
 static game * GAME;
 
 void game_init() {

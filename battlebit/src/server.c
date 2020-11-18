@@ -15,10 +15,13 @@
 #include<unistd.h>    //write
 
 static game_server *SERVER;
+static pthread_mutex_t *LOCK;
 
 void init_server() {
     if (SERVER == NULL) {
         SERVER = calloc(1, sizeof(struct game_server));
+        LOCK = malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(LOCK, NULL);
     } else {
         printf("Server already started");
     }
@@ -51,6 +54,7 @@ int handle_client_connect(int player) {
         sprintf(message, "battleBit (? for help) > ");
         send(SERVER->player_sockets[player], message, strlen(message), 0);
         char buffer[2000];
+        pthread_mutex_lock(LOCK);
         if (recv(SERVER->player_sockets[player], buffer, 2000, 0) < 0) {
             puts("Receive failed");
         } else {
@@ -169,6 +173,7 @@ int handle_client_connect(int player) {
                 send(SERVER->player_sockets[player], unknown_message, strlen(unknown_message), 0);
             }
         }
+        pthread_mutex_unlock(LOCK);
         cb_free(client_command);
     } while (playerConnected);
 

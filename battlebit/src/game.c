@@ -69,10 +69,10 @@ int game_fire(game *game, int player, int x, int y) {
             //opponent has no ships left, current player won
             if (player == 0) {
                 game->status = PLAYER_0_WINS;
-                return 2;
+                return 1;
             } else {
                 game->status = PLAYER_1_WINS;
-                return 2;
+                return 1;
             }
         }
         flipTurn();

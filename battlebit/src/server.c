@@ -115,17 +115,19 @@ int handle_client_connect(int player) {
                     int state = game_fire(current_game, player, x_pos, y_pos);
                     if (state == 1) {
                         //it was a hit
-                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT\n\n", player, x_pos, y_pos);
-                        send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
-                        sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- HIT\n\nbattleBit (? for help) > ", player, x_pos, y_pos);
-                        send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
-                        puts(opponent_message);
-                    } else if (state == 2) {
-                        //game was won
-                        sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\nbattleBit (? for help) > ", player, x_pos, y_pos, player);
-                        send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
-                        send(SERVER->player_sockets[1 - player], fire_message, strlen(fire_message), 0);
-                        puts(fire_message);
+                        if (current_game->status == PLAYER_0_WINS || current_game->status == PLAYER_1_WINS) {
+                            //game was won
+                            sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT -- PLAYER %d WINS!\n\nbattleBit (? for help) > ", player, x_pos, y_pos, player);
+                            send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                            send(SERVER->player_sockets[1 - player], fire_message, strlen(fire_message), 0);
+                            puts(fire_message);
+                        } else {
+                            sprintf(fire_message, "\nPlayer %d fires at %d %d -- HIT\n\n", player, x_pos, y_pos);
+                            send(SERVER->player_sockets[player], fire_message, strlen(fire_message), 0);
+                            sprintf(opponent_message, "\n\nPlayer %d fires at %d %d -- HIT\n\nbattleBit (? for help) > ", player, x_pos, y_pos);
+                            send(SERVER->player_sockets[1 - player], opponent_message, strlen(opponent_message), 0);
+                            puts(opponent_message);
+                        }
                     } else {
                         //it was a miss
                         sprintf(fire_message, "\nPlayer %d fires at %d %d -- MISS\n\n", player, x_pos, y_pos);

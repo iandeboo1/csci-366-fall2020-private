@@ -39,19 +39,9 @@ Foo
 [ RUN      ] game_fire.empty_game
 [       OK ] game_fire.empty_game (0 ms)
 [ RUN      ] game_fire.hit_fire
-/home/carson/Projects/msu/csci-366-fall2020/grading/scripts/repos/ian_deboo/battlebit/googletest/game.cpp:72: Failure
-Expected equality of these values:
-  game_fire(gameon,1,4,7)
-    Which is: 2
-  1
-[  FAILED  ] game_fire.hit_fire (0 ms)
+[       OK ] game_fire.hit_fire (0 ms)
 [ RUN      ] game_fire.hit_fire2
-/home/carson/Projects/msu/csci-366-fall2020/grading/scripts/repos/ian_deboo/battlebit/googletest/game.cpp:96: Failure
-Expected equality of these values:
-  game_fire(gameon,0,7,1)
-    Which is: 2
-  1
-[  FAILED  ] game_fire.hit_fire2 (0 ms)
+[       OK ] game_fire.hit_fire2 (0 ms)
 [ RUN      ] game_fire.miss_fire
 [       OK ] game_fire.miss_fire (0 ms)
 [ RUN      ] game_fire.miss_fire2
@@ -94,12 +84,7 @@ Expected equality of these values:
 
 [----------] 1 test from game_status
 [ RUN      ] game_status.is_correct
-/home/carson/Projects/msu/csci-366-fall2020/grading/scripts/repos/ian_deboo/battlebit/googletest/game.cpp:339: Failure
-Expected equality of these values:
-  game_fire(pGame,1,0,0)
-    Which is: 2
-  1
-[  FAILED  ] game_status.is_correct (0 ms)
+[       OK ] game_status.is_correct (0 ms)
 [----------] 1 test from game_status (0 ms total)
 
 [----------] 2 tests from repl_print_ships
@@ -118,10 +103,4 @@ Expected equality of these values:
 
 [----------] Global test environment tear-down
 [==========] 23 tests from 9 test suites ran. (0 ms total)
-[  PASSED  ] 20 tests.
-[  FAILED  ] 3 tests, listed below:
-[  FAILED  ] game_fire.hit_fire
-[  FAILED  ] game_fire.hit_fire2
-[  FAILED  ] game_status.is_correct
-
- 3 FAILED TESTS
+[  PASSED  ] 23 tests.

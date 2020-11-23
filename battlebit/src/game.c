@@ -18,10 +18,8 @@ void game_init() {
     }
     GAME = malloc(sizeof(game));
     GAME->status = CREATED;
-    pthread_mutex_init(&lock, NULL);
     game_init_player_info(&GAME->players[0]);
     game_init_player_info(&GAME->players[1]);
-    pthread_mutex_init(&lock, NULL);
 }
 
 void game_init_player_info(player_info *player_info) {

@@ -56,8 +56,8 @@ Foo
 7 1 1 1 1 0 0 0 1
 [       OK ] game_fire.miss_fire2 (0 ms)
 [ RUN      ] game_fire.invalid_fire
-[       OK ] game_fire.invalid_fire (1 ms)
-[----------] 6 tests from game_fire (1 ms total)
+[       OK ] game_fire.invalid_fire (0 ms)
+[----------] 6 tests from game_fire (0 ms total)
 
 [----------] 2 tests from add_ship_horizontal
 [ RUN      ] add_ship_horizontal.empty_ship
